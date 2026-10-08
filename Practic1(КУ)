@@ -1,0 +1,81 @@
+Задание 1
+Вывести отсортированный в алфавитном порядке список имён пользователей из /etc/passwd.
+Команда: grep -o '^[^:]*' /etc/passwd | sort
+Пояснение: grep -o '^[^:]*' вырезает всё до первого двоеточия (имя пользователя), затем sort сортирует по алфавиту.
+Вывод: labex:project/ $ grep -o '^[^:]*' /etc/passwd | sort
+_apt
+avahi
+backup
+bin
+colord
+daemon
+games
+gnats
+irc
+labex
+list
+lp
+mail
+man
+messagebus
+mongodb
+mysql
+news
+nobody
+proxy
+pulse
+redis
+root
+rtkit
+saned
+sshd
+sync
+sys
+systemd-network
+systemd-resolve
+systemd-timesync
+tcpdump
+usbmux
+uucp
+www-data
+
+
+Задание 2
+Вывести данные /etc/protocols для 5 наибольших портов в формате «номер протокола» + «имя».
+Команда: grep -v '^#' /etc/protocols | awk '{print $2, $1}' | sort -rn | head -5
+Пояснение: grep -v '^#' убирает строки с комментариями.
+awk '{print $2, $1}' меняет местами номер и имя (в файле сначала имя, потом номер).
+sort -rn сортирует по номеру по убыванию.
+head -5 оставляет первые 5 строк.
+Вывод: 142 rohc
+141 wesp
+140 shim6
+139 hip
+138 manet
+
+
+Задание 3
+Скрипт banner, который выводит текст в рамке. Размер рамки зависит от длины текста.
+Файл banner: #!/bin/bash
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <text>"
+    exit 1
+fi
+
+text="$1"
+len=${#text}
+# Формируем рамку: '+' + (len+2) дефисов + '+'
+border=$(printf '+%*s+' $((len+2)) | tr ' ' '-')
+
+echo "$border"
+echo "| $text |"
+echo "$border"
+Пояснение: len — длина текста. printf '+%*s+' создаёт строку нужной ширины из пробелов, tr ' ' '-' заменяет их на дефисы. Затем выводим три строки.
+Вывод: После ввода ./banner 'Hello from RTU MIREA!' получаем Hello from RTU MIREA!
+
+
+Задание 4
+
+
+
