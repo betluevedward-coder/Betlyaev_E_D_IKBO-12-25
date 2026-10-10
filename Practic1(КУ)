@@ -261,3 +261,25 @@ cat -A output.txt
 
 Задача 10
 Программа берёт папку и выводит все пустые файлы в ней.
+
+Файл empty_files: #!/bin/bash
+if [ -z "$1" ]; then
+    echo "Usage: $0 <directory>"
+    exit 1
+fi
+find "$1" -type f -empty
+
+Разбор команды: find -type f — только файлы (не папки)
+-empty — только пустые
+
+nano empty_files
+chmod +x empty_files
+# создаём разные файлы
+mkdir empty_test
+touch empty_test/a.txt       # пустой
+touch empty_test/b.txt       # пустой
+echo "text" > empty_test/c.txt   # непустой
+./empty_files empty_test
+
+Вывод: empty_test/a.txt
+empty_test/b.txt
