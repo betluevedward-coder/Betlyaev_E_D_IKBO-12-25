@@ -1,3 +1,4 @@
+ВАРИАНТ 2
 Заготовка создания папки для проекта:
 mkdir shell_emulator_v2 (создает новой папки с именем shell_emulator_v2)
 cd shell_emulator_v2 (cd shell_emulator_v2 заходит внутрь папки shell_emulator_v2)
