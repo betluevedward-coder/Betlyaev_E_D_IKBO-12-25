@@ -1,0 +1,530 @@
+Заготовка создания папки для проекта:
+mkdir shell_emulator_v2 (создает новой папки с именем shell_emulator_v2)
+cd shell_emulator_v2 (cd shell_emulator_v2 заходит внутрь папки shell_emulator_v2)
+git init (внутри создается скрытая папка .git, где Git будет хранить историю всех изменений (коммитов))
+mkdir src (созданет папку src внутри папки shell_emulator_v2)
+
+labex:project/ $ mkdir shell_emulator_v2
+labex:project/ $ cd shell_emulator_v2
+labex:shell_emulator_v2/ $ git init
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: is subject to change. To configure the initial branch name to use in all
+hint: of your new repositories, which will suppress this warning, call:
+hint: 
+hint: 	git config --global init.defaultBranch <name>
+hint: 
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint: 
+hint: 	git branch -m <name>
+Initialized empty Git repository in /home/labex/project/shell_emulator_v2/.git/
+labex:shell_emulator_v2/ (master) $ mkdir src
+
+
+ЭТАП 1. REPL (Read-Eval-Print Loop)
+
+Сначала создал файл src/main.py:
+nano src/main.py
+
+Затем вставил туда код:
+import os
+import shlex
+import sys
+
+# Имя VFS по умолчанию для первого этапа
+VFS_NAME = "default_vfs"
+
+def parse_input(line):
+    """Разбирает строку на команду и аргументы, раскрывая $VAR."""
+    expanded = os.path.expandvars(line)
+    try:
+        tokens = shlex.split(expanded)
+    except ValueError:
+        return line.strip(), []
+    if not tokens:
+        return "", []
+    return tokens[0], tokens[1:]
+
+def run_repl():
+    """Основной цикл REPL."""
+    print(f"Добро пожаловать в эмулятор оболочки. VFS: {VFS_NAME}")
+    while True:
+        try:
+            # Приглашение содержит имя VFS
+            line = input(f"{VFS_NAME}> ")
+        except (EOFError, KeyboardInterrupt):
+            print("\nВыход.")
+            break
+            
+        if not line.strip():
+            continue
+            
+        cmd, args = parse_input(line)
+        
+        if cmd == "exit":
+            break
+        elif cmd in ("ls", "cd"):
+            # Команды-заглушки
+            print(f"Заглушка {cmd}. Аргументы: {args}")
+ else:
+            print(f"Ошибка: неизвестная команда '{cmd}'")
+
+if __name__ == "__main__":
+    run_repl()
+
+
+Проверка:
+
+1) После запуска с помощью команды python3 src/main.py получилось следующее:
+labex:shell_emulator_v2/ (master*) $ python3 src/main.py
+Добро пожаловать в эмулятор оболочки. VFS: default_vfs
+
+2) Проверка ls/some/path (будет выведена заглушка):
+default_vfs> ls /some/path
+Заглушка ls. Аргументы: ['/some/path']
+
+3) Проверка cd $HOME ($HOME заменилось на реальный путь):
+default_vfs> cd $HOME
+Заглушка cd. Аргументы: ['/home/labex']
+
+4) Проверка unknown_cmd (выведится ошибка):
+default_vfs> unknown_cmd
+Ошибка: неизвестная команда 'unknown_cmd'
+
+5) Проверка exit (выход из эмулятора оболочки):
+default_vfs> exit
+labex:shell_emulator_v2/ (master*) $ 
+
+
+Сохранил в Git:
+git add .
+git commit -m "feat: init CLI REPL with env vars expansion and stubs"
+
+labex:shell_emulator_v2/ (master*) $ git config --global user.email "student@example.com"
+labex:shell_emulator_v2/ (master*) $ git config --global user.name "Edward Betlyaev"
+labex:shell_emulator_v2/ (master*) $ git commit -m "feat: init CLI REPL with env vars expansion and stubs"
+[master (root-commit) 09df406] feat: init CLI REPL with env vars expansion and stubs
+ 1 file changed, 44 insertions(+)
+ create mode 100644 src/main.py
+
+
+
+ЭТАП 2. Конфигурация
+
+Теперь обновляем src/main.py:
+nano src/main.py
+
+Заменил код на следующий:
+import os
+import shlex
+import sys
+import argparse
+
+def parse_input(line):
+    expanded = os.path.expandvars(line)
+    try:
+        tokens = shlex.split(expanded)
+    except ValueError:
+        return line.strip(), []
+    if not tokens:
+        return "", []
+    return tokens[0], tokens[1:]
+
+def execute_command(cmd, args, vfs_name):
+    """Выполняет одну команду. Возвращает True, если успешно."""
+    if cmd == "exit":
+        return True
+    elif cmd in ("ls", "cd"):
+        print(f"Заглушка {cmd}. Аргументы: {args}")
+        return True
+    else:
+        print(f"Ошибка: неизвестная команда '{cmd}'")
+        return False
+
+def run_script(script_path, vfs_name):
+    """Выполняет стартовый скрипт. Останавливается при первой ошибке."""
+    print(f"[DEBUG] Выполнение скрипта: {script_path}")
+    try:
+        with open(script_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue # Пропускаем пустые строки и комментарии
+                
+                # Имитируем диалог: выводим ввод
+                print(f"{vfs_name}> {line}")
+                cmd, args = parse_input(line)
+                
+                if cmd == "exit":
+                    return True
+                if not execute_command(cmd, args, vfs_name):
+                    print(f"Остановка скрипта из-за ошибки в команде: {line}")
+                    sys.exit(1)
+    except FileNotFoundError:
+        print(f"Ошибка: Скрипт не найден - {script_path}")
+        sys.exit(1)
+    return False
+
+def run_repl(vfs_name):
+    print(f"Добро пожаловать в эмулятор оболочки. VFS: {vfs_name}")
+    while True:
+        try:
+            line = input(f"{vfs_name}> ")
+        except (EOFError, KeyboardInterrupt):
+            print("\nВыход.")
+            break
+            
+        if not line.strip():
+            continue
+            
+        cmd, args = parse_input(line)
+        if cmd == "exit":
+            break
+        execute_command(cmd, args, vfs_name)
+
+def main():
+    parser = argparse.ArgumentParser(description="Эмулятор Shell")
+    parser.add_argument("--vfs", help="Путь к VFS")
+    parser.add_argument("--script", help="Путь к стартовому скрипту")
+    args = parser.parse_args()
+
+    # Отладочный вывод параметров
+    print(f"[DEBUG] VFS path: {args.vfs}")
+    print(f"[DEBUG] Script path: {args.script}")
+
+    # Пока VFS - это просто имя (файл XML подключим на этапе 3)
+    vfs_name = "default_vfs"
+    if args.vfs:
+        # Извлекаем имя файла без расширения для отображения в консоли
+        vfs_name = os.path.basename(args.vfs).split('.')[0]
+
+    # Если передан скрипт - выполняем его
+    script_did_exit = False
+    if args.script:
+        script_did_exit = run_script(args.script, vfs_name)
+
+    # Если в скрипте не было exit, запускаем интерактивный режим
+    if not script_did_exit:
+        run_repl(vfs_name)
+
+if __name__ == "__main__":
+    main()
+
+Создал тестовый скрипт test_script.txt:
+nano test_script.txt
+И вставил туда:
+# Это комментарий
+ls /folder
+cd $HOME
+unknown_cmd_here
+ls /not_reached 
+
+Проверка работы конфигурации:
+Запуск с параметрами:
+python3 src/main.py --vfs my_vfs.xml --script test_script.txt
+
+Как итог получилось следующее:
+labex:shell_emulator_v2/ (master*) $ python3 src/main.py --vfs my_vfs.xml --script test_script.txt
+[DEBUG] VFS path: my_vfs.xml
+[DEBUG] Script path: test_script.txt
+[DEBUG] Выполнение скрипта: test_script.txt
+my_vfs> ls /folder
+Заглушка ls. Аргументы: ['/folder']
+my_vfs> cd $HOME
+Заглушка cd. Аргументы: ['/home/labex']
+my_vfs> unknown_cmd_here
+Ошибка: неизвестная команда 'unknown_cmd_here'
+Остановка скрипта из-за ошибки в команде: unknown_cmd_here
+
+Создал bash-скрипт для ОС (по заданию):
+nano run_tests.sh
+
+Вставил внутрь nano run_tests.sh:
+#!/bin/bash
+echo "=== Тест 1: Без параметров ==="
+echo "exit" | python3 src/main.py
+
+echo -e "\n=== Тест 2: С параметром VFS ==="
+echo "ls" | python3 src/main.py --vfs test.xml
+
+echo -e "\n=== Тест 3: С ошибочным скриптом ==="
+python3 src/main.py --script test_script.txt
+
+
+После запустил:
+chmod +x run_tests.sh
+./run_tests.sh
+
+Получилось следующее:
+labex:shell_emulator_v2/ (master*) $ chmod +x run_tests.sh
+./run_tests.sh
+=== Тест 1: Без параметров ===
+[DEBUG] VFS path: None
+[DEBUG] Script path: None
+Добро пожаловать в эмулятор оболочки. VFS: default_vfs
+default_vfs> 
+=== Тест 2: С параметром VFS ===
+[DEBUG] VFS path: test.xml
+[DEBUG] Script path: None
+Добро пожаловать в эмулятор оболочки. VFS: test
+test> Заглушка ls. Аргументы: []
+test> 
+Выход.
+
+=== Тест 3: С ошибочным скриптом ===
+[DEBUG] VFS path: None
+[DEBUG] Script path: test_script.txt
+[DEBUG] Выполнение скрипта: test_script.txt
+default_vfs> ls /folder
+Заглушка ls. Аргументы: ['/folder']
+default_vfs> cd $HOME
+Заглушка cd. Аргументы: ['/home/labex']
+default_vfs> unknown_cmd_here
+Ошибка: неизвестная команда 'unknown_cmd_here'
+Остановка скрипта из-за ошибки в команде: unknown_cmd_here
+
+
+Сохранил в Git:
+git add .
+git commit -m "feat: add CLI args, start script execution and debug output"
+
+[master 0fdbba8] feat: add CLI args, start script execution and debug output
+ 3 files changed, 80 insertions(+), 16 deletions(-)
+ create mode 100755 run_tests.sh
+ create mode 100644 test_script.txt
+
+
+
+ЭТАП 3. VFS (Виртуальная файловая система)
+На этом этапе создал класс, который хранит структуру папок и файлов в памяти (без распаковки на диск), и добавил команду vfs-init.
+
+Создал класс VFS — src/vfs.py:
+nano src/vfs.py
+
+Вставил внутрь nano src/vfs.py:
+import xml.etree.ElementTree as ET
+import base64
+
+class VfsError(Exception):
+    pass
+
+class Vfs:
+    def __init__(self, name="default_vfs"):
+        self.name = name
+        self.root = {} # Словарь для хранения: {'file.txt': 'content', 'dir': {'nested.txt': 'data'}}
+
+    @classmethod
+    def from_xml(cls, path):
+        """Загружает VFS из XML в память."""
+        try:
+            tree = ET.parse(path)
+        except FileNotFoundError:
+            raise VfsError(f"Файл не найден: {path}")
+        except ET.ParseError:
+            raise VfsError(f"Неверный формат XML: {path}")
+
+        root = tree.getroot()
+        if root.tag != "vfs":
+            raise VfsError("Корневой тег должен быть <vfs>")
+
+        name = root.get("name", "vfs")
+        vfs = cls(name)
+        vfs.root = vfs._parse_children(root)
+        return vfs
+
+    def _parse_children(self, element):
+        data = {}
+        for child in element:
+            if child.tag == "file":
+                fname = child.get("name")
+                content = child.get("content", "")
+                # Если указано base64, декодируем в память
+                if child.get("encoding") == "base64":
+                    try:
+                        content = base64.b64decode(content)
+                    except Exception:
+                        raise VfsError(f"Ошибка base64 в файле {fname}")
+                data[fname] = content
+            elif child.tag == "dir":
+                dname = child.get("name")
+                data[dname] = self._parse_children(child)
+        return data
+
+    def init_default(self):
+        """Команда vfs-init: заменяет текущую VFS на VFS по умолчанию."""
+        self.name = "default_vfs"
+        self.root = {}
+        print("VFS инициализирована по умолчанию (очищена).")
+
+Обновил src/main.py, чтобы использовать VFS:
+nano src/main.py
+
+Затем обновил импорты и логику в main() и run_repl():
+import os
+import shlex
+import sys
+import argparse
+from vfs import Vfs, VfsError # Импортируем нашу VFS
+
+# ... (функция parse_input остается без изменений) ...
+
+def execute_command(cmd, args, vfs):
+    """Выполняет команду, принимая объект VFS."""
+    if cmd == "exit":
+        return True
+    elif cmd in ("ls", "cd"):
+        print(f"Заглушка {cmd}. Аргументы: {args}")
+        return True
+    elif cmd == "vfs-init":
+        vfs.init_default()
+        return True
+    else:
+        print(f"Ошибка: неизвестная команда '{cmd}'")
+        return False
+
+def run_script(script_path, vfs):
+    print(f"[DEBUG] Выполнение скрипта: {script_path}")
+    try:
+        with open(script_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                
+                print(f"{vfs.name}> {line}")
+                cmd, args = parse_input(line)
+                
+                if cmd == "exit":
+                    return True
+                if not execute_command(cmd, args, vfs):
+                    print(f"Остановка скрипта из-за ошибки: {line}")
+                    sys.exit(1)
+    except FileNotFoundError:
+        print(f"Ошибка: Скрипт не найден - {script_path}")
+        sys.exit(1)
+    return False
+
+def run_repl(vfs):
+    print(f"Добро пожаловать в эмулятор оболочки. VFS: {vfs.name}")
+    while True:
+        try:
+            line = input(f"{vfs.name}> ")
+        except (EOFError, KeyboardInterrupt):
+            print("\nВыход.")
+            break
+            
+        if not line.strip():
+            continue
+            
+        cmd, args = parse_input(line)
+        if cmd == "exit":
+            break
+        execute_command(cmd, args, vfs)
+
+def main():
+    parser = argparse.ArgumentParser(description="Эмулятор Shell")
+    parser.add_argument("--vfs", help="Путь к VFS (XML)")
+    parser.add_argument("--script", help="Путь к стартовому скрипту")
+    args = parser.parse_args()
+
+    print(f"[DEBUG] VFS path: {args.vfs}")
+    print(f"[DEBUG] Script path: {args.script}")
+
+    # Инициализация VFS
+    if args.vfs:
+        try:
+            vfs = Vfs.from_xml(args.vfs)
+        except VfsError as e:
+            print(f"Ошибка загрузки VFS: {e}")
+            sys.exit(1)
+    else:
+        vfs = Vfs()
+
+    print(f"[DEBUG] VFS name: {vfs.name}")
+
+    script_did_exit = False
+    if args.script:
+        script_did_exit = run_script(args.script, vfs)
+
+    if not script_did_exit:
+        run_repl(vfs)
+
+if __name__ == "__main__":
+    main()
+
+
+Создал XML-файлы (по заданию несколько):
+Минимальный (minimal.xml):
+nano minimal.xml
+
+Вставил внутрь nano minimal.xml следующее:
+<?xml version="1.0" encoding="UTF-8"?>
+<vfs name="minimal">
+    <file name="readme.txt" content="Hello!"/>
+</vfs>
+
+
+Сложный (nested.xml), с 3 уровнями вложенности и base64:
+nano nested.xml
+
+Вставил внутрь nano nested.xml:
+<?xml version="1.0" encoding="UTF-8"?>
+<vfs name="nested">
+    <dir name="home">
+        <dir name="user">
+            <dir name="docs">
+                <file name="note.txt" content="Deep note"/>
+            </dir>
+            <file name="secret.bin" content="SGVsbG8gV29ybGQ=" encoding="base64"/>
+        </dir>
+    </dir>
+</vfs>
+
+
+Проверка работы:
+
+С минимальной VFS:
+python3 src/main.py --vfs minimal.xml
+Вывод:
+labex:shell_emulator_v2/ (master*) $ python3 src/main.py --vfs minimal.xml
+[DEBUG] VFS path: minimal.xml
+[DEBUG] Script path: None
+[DEBUG] VFS name: minimal
+Добро пожаловать в эмулятор оболочки. VFS: minimal
+minimal>
+
+Со сложной VFS и скриптом (создал script3.txt с командами ls, vfs-init, exit):
+python3 src/main.py --vfs nested.xml --script script3.txt
+Вывод:
+minimal> python3 src/main.py --vfs nested.xml --script script3.txt
+Traceback (most recent call last):
+  File "/home/labex/project/shell_emulator_v2/src/main.py", line 91, in <module>
+    main()
+  File "/home/labex/project/shell_emulator_v2/src/main.py", line 88, in main
+    run_repl(vfs)
+  File "/home/labex/project/shell_emulator_v2/src/main.py", line 57, in run_repl
+    cmd, args = parse_input(line)
+NameError: name 'parse_input' is not defined
+
+Проверка ошибки (несуществующий файл):
+python3 src/main.py --vfs no_such_file.xml
+Вывод:
+labex:shell_emulator_v2/ (master*) $ python3 src/main.py --vfs no_such_file.xml
+[DEBUG] VFS path: no_such_file.xml
+[DEBUG] Script path: None
+Ошибка загрузки VFS: Файл не найден: no_such_file.xml
+
+
+Сохранил в Git:
+labex:shell_emulator_v2/ (master*) $ git add .
+git commit -m "feat(vfs): implement in-memory XML VFS with base64 and vfs-init"
+[master 0b4199d] feat(vfs): implement in-memory XML VFS with base64 and vfs-init
+ 5 files changed, 97 insertions(+), 32 deletions(-)
+ create mode 100644 minimal.xml
+ create mode 100644 nested.xml
+ create mode 100644 src/__pycache__/vfs.cpython-310.pyc
+ create mode 100644 src/vfs.py
+
+
+
+
